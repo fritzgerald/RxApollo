@@ -17,12 +17,7 @@ public enum RxApolloError: Error {
 }
 
 /// Reactive extensions for `ApolloClient`.
-public final class ApolloReactiveExtensions {
-    private let client: ApolloClient
-
-    fileprivate init(_ client: ApolloClient) {
-        self.client = client
-    }
+extension Reactive where Base: ApolloClient {
 
     /// Fetches a query from the server or from the local cache, depending on the current contents of the cache and the specified cache policy.
     ///
@@ -36,7 +31,7 @@ public final class ApolloReactiveExtensions {
         cachePolicy: CachePolicy = .returnCacheDataElseFetch,
         queue: DispatchQueue = DispatchQueue.main) -> Maybe<Query.Data> {
         return Maybe.create { maybe in
-            let cancellable = self.client.fetch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
+            let cancellable = self.base.fetch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
                 if let error = error {
                     maybe(.error(error))
                 } else if let errors = result?.errors {
@@ -66,7 +61,7 @@ public final class ApolloReactiveExtensions {
         cachePolicy: CachePolicy = .returnCacheDataElseFetch,
         queue: DispatchQueue = DispatchQueue.main) -> Observable<Query.Data> {
         return Observable.create { observer in
-            let watcher = self.client.watch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
+            let watcher = self.base.watch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
                 if let error = error {
                     observer.onError(error)
                 } else if let errors = result?.errors {
@@ -92,7 +87,7 @@ public final class ApolloReactiveExtensions {
     /// - Returns: A `Maybe` that emits the results of the mutation.
     public func perform<Mutation: GraphQLMutation>(mutation: Mutation, queue: DispatchQueue = DispatchQueue.main) -> Maybe<Mutation.Data> {
         return Maybe.create { maybe in
-            let cancellable = self.client.perform(mutation: mutation, queue: queue) { result, error in
+            let cancellable = self.base.perform(mutation: mutation, queue: queue) { result, error in
                 if let error = error {
                     maybe(.error(error))
                 } else if let errors = result?.errors {
@@ -111,7 +106,4 @@ public final class ApolloReactiveExtensions {
     }
 }
 
-public extension ApolloClient {
-    /// Reactive extensions.
-    var rx: ApolloReactiveExtensions { return ApolloReactiveExtensions(self) }
-}
+extension ApolloClient: ReactiveCompatible {}
