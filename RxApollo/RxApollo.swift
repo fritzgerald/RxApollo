@@ -14,6 +14,7 @@ import Apollo
 public enum RxApolloError: Error {
     /// One or more `GraphQLError`s were encountered.
     case graphQLErrors([GraphQLError])
+    case unknown
 }
 
 /// Reactive extensions for `ApolloClient`.
@@ -29,23 +30,21 @@ extension Reactive where Base: ApolloClient {
     public func fetch<Query: GraphQLQuery>(
         query: Query,
         cachePolicy: CachePolicy = .returnCacheDataElseFetch,
-        queue: DispatchQueue = DispatchQueue.main) -> Maybe<Query.Data> {
-        return Maybe.create { maybe in
+        queue: DispatchQueue = DispatchQueue.main) -> Single<Query.Data?> {
+        return .create { single in
             let cancellable = self.base.fetch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
                 if let error = error {
-                    maybe(.error(error))
+                    single(.error(error))
                 } else if let errors = result?.errors {
-                    maybe(.error(RxApolloError.graphQLErrors(errors)))
-                } else if let data = result?.data {
-                    maybe(.success(data))
+                    single(.error(RxApolloError.graphQLErrors(errors)))
+                } else if let result = result {
+                    single(.success(result.data))
                 } else {
-                    maybe(.completed)
+                  single(.error(RxApolloError.unknown))
                 }
             }
 
-            return Disposables.create {
-                cancellable.cancel()
-            }
+            return Disposables.create(with: cancellable.cancel)
         }
     }
 
@@ -59,23 +58,19 @@ extension Reactive where Base: ApolloClient {
     public func watch<Query: GraphQLQuery>(
         query: Query,
         cachePolicy: CachePolicy = .returnCacheDataElseFetch,
-        queue: DispatchQueue = DispatchQueue.main) -> Observable<Query.Data> {
+        queue: DispatchQueue = DispatchQueue.main) -> Observable<Query.Data?> {
         return Observable.create { observer in
             let watcher = self.base.watch(query: query, cachePolicy: cachePolicy, queue: queue) { result, error in
                 if let error = error {
                     observer.onError(error)
                 } else if let errors = result?.errors {
                     observer.onError(RxApolloError.graphQLErrors(errors))
-                } else if let data = result?.data {
-                    observer.onNext(data)
+                } else {
+                    observer.onNext(result?.data)
                 }
-
-                // Should we silently ignore the case where `result` and `error` are both nil, or should this be an error situation?
             }
 
-            return Disposables.create {
-                watcher.cancel()
-            }
+          return Disposables.create(with: watcher.cancel)
         }
     }
 
@@ -85,23 +80,21 @@ extension Reactive where Base: ApolloClient {
     ///   - mutation: The mutation to perform.
     ///   - queue: A dispatch queue on which the result handler will be called. Defaults to the main queue.
     /// - Returns: A `Maybe` that emits the results of the mutation.
-    public func perform<Mutation: GraphQLMutation>(mutation: Mutation, queue: DispatchQueue = DispatchQueue.main) -> Maybe<Mutation.Data> {
-        return Maybe.create { maybe in
+    public func perform<Mutation: GraphQLMutation>(mutation: Mutation, queue: DispatchQueue = DispatchQueue.main) -> Single<Mutation.Data?> {
+        return .create { single in
             let cancellable = self.base.perform(mutation: mutation, queue: queue) { result, error in
                 if let error = error {
-                    maybe(.error(error))
+                    single(.error(error))
                 } else if let errors = result?.errors {
-                    maybe(.error(RxApolloError.graphQLErrors(errors)))
-                } else if let data = result?.data {
-                    maybe(.success(data))
+                    single(.error(RxApolloError.graphQLErrors(errors)))
+                } else if let result = result {
+                    single(.success(result.data))
                 } else {
-                    maybe(.completed)
+                    single(.error(RxApolloError.unknown))
                 }
             }
 
-            return Disposables.create {
-                cancellable.cancel()
-            }
+          return Disposables.create(with: cancellable.cancel)
         }
     }
 }

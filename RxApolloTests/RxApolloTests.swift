@@ -33,7 +33,7 @@ class RxApolloTests: XCTestCase {
         let client = ApolloClient(networkTransport: networkTransport, store: store(initialRecords: nil))
         let result = try client.rx.fetch(query: query).toBlocking().single()
 
-        XCTAssertEqual(result.hero?.name, "Luke Skywalker")
+        XCTAssertEqual(result?.hero?.name, "Luke Skywalker")
     }
 
     func testUnsuccessfulFetch() {
@@ -99,7 +99,10 @@ class RxApolloTests: XCTestCase {
             client.fetch(query: HeroNameQuery(), cachePolicy: .fetchIgnoringCacheData)
         }
 
-        let results = try watched.take(2).timeout(5, scheduler: MainScheduler.instance).toBlocking().toArray()
+        let results = try watched.take(2).timeout(5, scheduler: MainScheduler.instance)
+          .toBlocking()
+          .toArray()
+          .compactMap { $0 }
 
         let expectedFriendsNames = ["Luke Skywalker", "Han Solo", "Leia Organa"]
 
@@ -132,7 +135,9 @@ class RxApolloTests: XCTestCase {
         ])
 
         let client = ApolloClient(networkTransport: networkTransport, store: store(initialRecords: nil))
-        let result = try client.rx.perform(mutation: mutation).toBlocking().single()
+        guard let result = try client.rx.perform(mutation: mutation).toBlocking().single() else {
+          fatalError("CreateAwesomeReviewMutation should not return a nil result")
+        }
 
         XCTAssertEqual(result.createReview?.stars, 10)
         XCTAssertEqual(result.createReview?.commentary, "This is awesome!")
