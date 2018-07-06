@@ -33,7 +33,7 @@ class RxApolloTests: XCTestCase {
         let client = ApolloClient(networkTransport: networkTransport, store: store(initialRecords: nil))
         let result = try client.rx.fetch(query: query).toBlocking().single()
 
-        XCTAssertEqual(result?.hero?.name, "Luke Skywalker")
+        XCTAssertEqual(result.hero?.name, "Luke Skywalker")
     }
 
     func testUnsuccessfulFetch() {
@@ -134,8 +134,8 @@ class RxApolloTests: XCTestCase {
         let client = ApolloClient(networkTransport: networkTransport, store: store(initialRecords: nil))
         let result = try client.rx.perform(mutation: mutation).toBlocking().single()
 
-        XCTAssertEqual(result?.createReview?.stars, 10)
-        XCTAssertEqual(result?.createReview?.commentary, "This is awesome!")
+        XCTAssertEqual(result.createReview?.stars, 10)
+        XCTAssertEqual(result.createReview?.commentary, "This is awesome!")
     }
 
     func testUnsuccessfulPerform() {
